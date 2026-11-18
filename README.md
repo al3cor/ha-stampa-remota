@@ -6,11 +6,11 @@
 <b>Integrazione HACS</b>: funziona anche con Home Assistant in Docker/Container o Core (nessuna app, niente Supervisor).</p>
 
 Versione integrazione dell'app [Remote Print](https://github.com/Gapman1980/ha-remote-print) di Gapman1980 (MIT):
-stessa pagina, ma senza CUPS e senza container in più.
+stesse funzioni, ma senza CUPS e senza container in più.
 
 ## Cosa fa
 
-- Voce **Stampa** nel menu laterale di Home Assistant: scegli il file, copie, bianco e nero, adatta al foglio, pagine e premi
+- Voce **Stampa** nel menu laterale di Home Assistant (grafica sobria, colori del tema di HA, chiaro e scuro): scegli il file, copie, bianco e nero, adatta al foglio, pagine e premi
   **STAMPA A CASA**. Funziona ovunque funzioni Home Assistant (app, Nabu Casa, VPN): passa dall'accesso di HA, nessuna porta aperta.
 - Anche per gli utenti **non amministratori** (opzione "Pannello solo per gli amministratori" spenta).
 - Accetta **PDF, foto (JPG, PNG, HEIC dell'iPhone) e testo**.
@@ -103,4 +103,4 @@ Per `file:` il percorso deve stare in `allowlist_external_dirs` (es. `/config/ww
 
 ---
 
-MIT License · pagina e grafica derivate da Remote Print di Gapman1980.
+MIT License · idea, conversione e icona da Remote Print di Gapman1980; pannello ridisegnato nello stile di Home Assistant.

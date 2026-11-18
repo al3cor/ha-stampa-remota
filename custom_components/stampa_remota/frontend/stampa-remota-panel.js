@@ -1,98 +1,134 @@
 // Stampa remota - pannello laterale di Home Assistant (web component, nessuna libreria).
-// Grafica ripresa da "Remote Print" di Gapman1980 (MIT). Le chiamate passano dalle API autenticate di HA.
+// Stile sobrio: elementi e colori del tema di HA (ha-card, ha-icon, ha-switch), accento verde come le plance di casa.
+// Le chiamate passano dalle API autenticate di HA.
 const I18N = {
-  it: {title: 'Stampa da remoto', subtitle: 'Scegli un file: la stampante di casa lo stampa, anche se sei fuori.',
-       pick: 'Tocca per scegliere il file', pick_s: 'PDF, foto (JPG, PNG, HEIC) o testo', change: 'tocca per cambiarlo',
-       copies: 'Copie', mono: 'Bianco e nero', mono_s: 'risparmia l\'inchiostro a colori', fit: 'Adatta al foglio', fit_s: 'rimpicciolisce se serve',
-       pages: 'Pagine', pages_s: 'vuoto = tutte · es. 1-3,5', all: 'tutte', print: '🖨️ STAMPA A CASA', recent: 'Ultime stampe', none: 'Nessuna stampa ancora',
-       sent: '✓ Inviato! La stampante di casa sta per stamparlo', uploading: 'Caricamento…', converting: 'Preparo le pagine…',
-       lost: '✗ Connessione persa durante il caricamento', weird: 'Risposta inattesa', error: 'Errore',
-       copy1: 'copia', copyN: 'copie', page1: 'pagina', pageN: 'pagine', ink: 'Inchiostro', unreachable: 'Stampante non raggiungibile: stamperà appena si riaccende',
-       st: {conversione: 'Preparo…', in_coda: 'In coda', invio: 'Invio…', stampa: 'Stampa…', fatto: 'Stampato ✓', annullato: 'Annullato', errore: 'Errore'},
-       al: {'media-empty': 'Carta finita: aggiungi fogli', 'media-needed': 'Carta finita: aggiungi fogli', 'media-jam': 'Foglio inceppato',
+  it: {title: 'Stampa', printer: 'Stampante', new: 'Nuova stampa', recent: 'Ultime stampe', none: 'Nessuna stampa ancora',
+       pick: 'Scegli un file', pick_s: 'PDF, foto (JPG, PNG, HEIC) o testo · massimo 60 MB', change: 'Cambia',
+       copies: 'Copie', mono: 'Bianco e nero', mono_s: 'Usa solo l\'inchiostro nero', fit: 'Adatta al foglio', fit_s: 'Rimpicciolisce la pagina se serve',
+       pages: 'Pagine', pages_s: 'Vuoto = tutte, es. 1-3,5', all: 'Tutte', print: 'Stampa',
+       sent: 'Inviato alla stampante', uploading: 'Caricamento…', converting: 'Preparazione delle pagine…',
+       lost: 'Connessione persa durante il caricamento', weird: 'Risposta inattesa', error: 'Errore', cancel: 'Annulla',
+       copy1: 'copia', copyN: 'copie', page1: 'pagina', pageN: 'pagine', unknown: 'Stampante', paper: 'Carta',
+       ready: 'Pronta', busy: 'In stampa', stopped: 'Ferma', offline: 'Non raggiungibile', offline_s: 'Le stampe restano in coda e partono quando torna disponibile',
+       ink: {Black: 'Nero', Color: 'Colore', Cyan: 'Ciano', Magenta: 'Magenta', Yellow: 'Giallo'},
+       st: {conversione: 'Preparazione', in_coda: 'In coda', invio: 'Invio', stampa: 'In stampa', fatto: 'Stampato', annullato: 'Annullato', errore: 'Errore'},
+       al: {'media-empty': 'Carta finita', 'media-needed': 'Carta finita', 'media-jam': 'Foglio inceppato',
             'toner-low': 'Toner in esaurimento', 'toner-empty': 'Toner finito', 'marker-supply-low': 'Inchiostro in esaurimento',
-            'marker-supply-empty': 'Inchiostro finito', 'door-open': 'Sportello aperto', 'cover-open': 'Coperchio aperto',
-            'offline': 'Stampante spenta o non raggiungibile', 'paused': 'Stampante in pausa'}},
-  en: {title: 'Remote Print', subtitle: 'Pick a file: your home printer prints it, even when you are away.',
-       pick: 'Tap to choose a file', pick_s: 'PDF, photos (JPG, PNG, HEIC) or text', change: 'tap to change it',
-       copies: 'Copies', mono: 'Black and white', mono_s: 'saves colour ink', fit: 'Fit to page', fit_s: 'shrinks it if needed',
-       pages: 'Pages', pages_s: 'empty = all · e.g. 1-3,5', all: 'all', print: '🖨️ PRINT AT HOME', recent: 'Recent prints', none: 'No prints yet',
-       sent: '✓ Sent! Your home printer is about to print it', uploading: 'Uploading…', converting: 'Preparing the pages…',
-       lost: '✗ Connection lost while uploading', weird: 'Unexpected answer', error: 'Error',
-       copy1: 'copy', copyN: 'copies', page1: 'page', pageN: 'pages', ink: 'Ink', unreachable: 'Printer not reachable: it will print when it comes back',
-       st: {conversione: 'Preparing…', in_coda: 'Queued', invio: 'Sending…', stampa: 'Printing…', fatto: 'Printed ✓', annullato: 'Canceled', errore: 'Error'},
+            'marker-supply-empty': 'Inchiostro finito', 'door-open': 'Sportello aperto', 'cover-open': 'Coperchio aperto', 'paused': 'In pausa'}},
+  en: {title: 'Print', printer: 'Printer', new: 'New print', recent: 'Recent prints', none: 'No prints yet',
+       pick: 'Choose a file', pick_s: 'PDF, photos (JPG, PNG, HEIC) or text · up to 60 MB', change: 'Change',
+       copies: 'Copies', mono: 'Black and white', mono_s: 'Uses black ink only', fit: 'Fit to page', fit_s: 'Shrinks the page if needed',
+       pages: 'Pages', pages_s: 'Empty = all, e.g. 1-3,5', all: 'All', print: 'Print',
+       sent: 'Sent to the printer', uploading: 'Uploading…', converting: 'Preparing the pages…',
+       lost: 'Connection lost while uploading', weird: 'Unexpected answer', error: 'Error', cancel: 'Cancel',
+       copy1: 'copy', copyN: 'copies', page1: 'page', pageN: 'pages', unknown: 'Printer', paper: 'Paper',
+       ready: 'Ready', busy: 'Printing', stopped: 'Stopped', offline: 'Not reachable', offline_s: 'Prints stay queued and start when it is back',
+       ink: {Black: 'Black', Color: 'Colour', Cyan: 'Cyan', Magenta: 'Magenta', Yellow: 'Yellow'},
+       st: {conversione: 'Preparing', in_coda: 'Queued', invio: 'Sending', stampa: 'Printing', fatto: 'Printed', annullato: 'Canceled', errore: 'Error'},
        al: {'media-empty': 'Out of paper', 'media-needed': 'Out of paper', 'media-jam': 'Paper jam', 'toner-low': 'Toner low', 'toner-empty': 'Toner empty',
-            'marker-supply-low': 'Ink low', 'marker-supply-empty': 'Ink empty', 'door-open': 'Door open', 'cover-open': 'Cover open',
-            'offline': 'Printer off or unreachable', 'paused': 'Printer paused'}},
+            'marker-supply-low': 'Ink low', 'marker-supply-empty': 'Ink empty', 'door-open': 'Door open', 'cover-open': 'Cover open', 'paused': 'Paused'}},
 };
 
 const CSS = `
-:host { --a: #30D158; --b: #00CFFF; --bg: #0b0e1a; --t: #fff; --m: #8a94a8; display: block; min-height: 100vh;
-  background: radial-gradient(120% 60% at 50% 0%, #1b2440 0%, var(--bg) 60%); color: var(--t);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-.bar { display: flex; align-items: center; gap: 8px; height: 56px; padding: 0 8px; }
-.bar button { width: 44px; height: 44px; border: none; background: none; color: #fff; border-radius: 50%; }
-.bar button svg { width: 24px; height: 24px; } .bar span { font-size: 20px; font-weight: 700; }
-.wrap { max-width: 560px; margin: 0 auto; padding: 4px 16px 40px; display: flex; flex-direction: column; gap: 14px; }
-.box { border-radius: 20px; padding: 16px; background: linear-gradient(160deg, #161a2e, #0b0e1a);
-       box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--a) 40%, transparent), 0 0 20px color-mix(in srgb, var(--a) 18%, transparent); }
-.hd { display: flex; align-items: center; gap: 14px; }
-.hd svg { width: 84px; height: 60px; flex: none; filter: drop-shadow(0 0 6px var(--a)); }
-.hd b { display: block; font-size: 22px; } .hd span { color: var(--m); font-size: 13px; }
-.co { fill: #24213a; stroke: var(--a); stroke-width: 1.6; } .fo { fill: #eef2f7; } .fe { fill: #05060c; }
-.ri { stroke: #8a94a8; stroke-width: 1; } .led { fill: var(--a); animation: lamp 2s ease-in-out infinite; }
-.usc { transform: translateY(-6px); } .lavora .usc { animation: esce 2s ease-in-out infinite; }
-@keyframes esce { from { transform: translateY(-9px); } to { transform: translateY(3px); } }
-@keyframes lamp { 50% { opacity: .3; } }
-.ink { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; } .ink:empty { display: none; }
-.ink div { flex: 1; min-width: 110px; font-size: 12px; color: var(--m); }
-.ink i { display: block; height: 8px; border-radius: 4px; background: rgba(255,255,255,.12); margin-top: 4px; overflow: hidden; }
-.ink i b { display: block; height: 100%; border-radius: 4px; }
-.drop { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 150px; border-radius: 18px;
-        border: 2px dashed color-mix(in srgb, var(--b) 60%, transparent); background: color-mix(in srgb, var(--b) 7%, transparent);
-        text-align: center; padding: 16px; cursor: pointer; transition: transform .15s; }
-.drop:active { transform: scale(.98); }
-.drop .ic { font-size: 40px; animation: su 2.2s ease-in-out infinite; } @keyframes su { 50% { transform: translateY(-5px); } }
-.drop b { font-size: 18px; overflow-wrap: anywhere; } .drop span { color: var(--m); font-size: 13px; }
-.drop.pieno { border-style: solid; border-color: var(--a); background: color-mix(in srgb, var(--a) 10%, transparent); }
+:host { --sr-prim: #0c8a6c; --sr-ok: #0d9e80; --sr-warn: #c27a00; --sr-err: var(--error-color, #d23c3c);
+  display: block; min-height: 100vh; background: var(--primary-background-color); color: var(--primary-text-color);
+  font-family: var(--paper-font-body1_-_font-family, inherit); -webkit-font-smoothing: antialiased; }
+* { box-sizing: border-box; }
+button { font: inherit; -webkit-tap-highlight-color: transparent; }
+.bar { display: flex; align-items: center; gap: 4px; height: var(--header-height, 56px); padding: 0 4px 0 12px;
+  background: var(--app-header-background-color); color: var(--app-header-text-color, #fff);
+  border-bottom: var(--app-header-border-bottom, none); }
+.bar button { display: none; width: 48px; height: 48px; margin-left: -8px; border: 0; background: none; color: inherit; border-radius: 50%; cursor: pointer; }
+:host([narrow]) .bar button { display: inline-flex; align-items: center; justify-content: center; }
+.bar .t { font-size: 20px; font-weight: 400; margin-left: 8px; }
+.wrap { max-width: 640px; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+ha-card { padding: 16px; }
+h2 { margin: 0 0 12px; font-size: 18px; font-weight: 600; }
+.sec { font-size: 14px; color: var(--secondary-text-color); }
+
+.pr-head { display: flex; align-items: center; gap: 12px; }
+.ico { flex: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: rgba(12, 138, 108, .12); color: var(--sr-prim); }
+.pr-head .n { flex: 1; min-width: 0; }
+.pr-head .n b { display: block; font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap;
+  background: rgba(127, 127, 127, .14); color: var(--secondary-text-color); }
+.pill.up { background: rgba(16, 161, 132, .15); color: var(--sr-ok); }
+.pill.warn { background: rgba(230, 150, 20, .16); color: var(--sr-warn); }
+.pill.down { background: rgba(220, 60, 60, .14); color: var(--sr-err); }
+.inks { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 14px; }
+.inks:empty { display: none; }
+.ink { border: 1px solid var(--divider-color); border-radius: 12px; padding: 10px 12px; }
+.ink .r { display: flex; justify-content: space-between; font-size: 13px; color: var(--secondary-text-color); }
+.ink .r b { font-size: 14px; font-weight: 600; color: var(--primary-text-color); }
+.ink .bar2 { height: 6px; border-radius: 3px; background: var(--divider-color); margin-top: 8px; overflow: hidden; }
+.ink .bar2 i { display: block; height: 100%; border-radius: 3px; }
+.alerts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.alerts:empty { display: none; }
+.note { font-size: 13px; color: var(--secondary-text-color); margin: 10px 0 0; }
+.note:empty { display: none; }
+
+.drop { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 22px 16px; text-align: center; cursor: pointer;
+  border: 1px dashed var(--divider-color); border-radius: 12px; color: var(--secondary-text-color); }
+.drop:hover { border-color: var(--sr-prim); }
+.drop ha-icon { --mdc-icon-size: 28px; color: var(--sr-prim); margin-bottom: 4px; }
+.drop b { font-size: 15px; font-weight: 500; color: var(--primary-text-color); }
+.drop span { font-size: 13px; }
+.file { display: none; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--divider-color); border-radius: 12px; }
+.file ha-icon { color: var(--secondary-text-color); flex: none; }
+.file .n { flex: 1; min-width: 0; }
+.file .n b { display: block; font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file .n span { font-size: 12px; color: var(--secondary-text-color); }
+.txt { border: 0; background: none; color: var(--sr-prim); font-weight: 500; font-size: 14px; padding: 8px; border-radius: 8px; cursor: pointer; }
+.chosen .drop { display: none; } .chosen .file { display: flex; }
 input[type=file] { display: none; }
-.riga { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 2px; border-bottom: 1px solid rgba(255,255,255,.07); }
-.riga:last-child { border: none; } .riga label { font-size: 15px; font-weight: 600; } .riga small { display: block; color: var(--m); font-size: 12px; font-weight: 400; }
-.step { display: flex; align-items: center; gap: 4px; }
-.step button { width: 38px; height: 38px; border-radius: 12px; border: 1px solid rgba(255,255,255,.15); background: rgba(255,255,255,.06); color: #fff; font-size: 20px; font-weight: 700; }
-.step output { min-width: 34px; text-align: center; font-size: 18px; font-weight: 800; }
-.sw { position: relative; width: 52px; height: 30px; flex: none; }
-.sw input { display: none; } .sw i { position: absolute; inset: 0; border-radius: 15px; background: rgba(255,255,255,.15); transition: .2s; }
-.sw i::after { content: ''; position: absolute; left: 3px; top: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: .2s; }
-.sw input:checked + i { background: var(--a); box-shadow: 0 0 10px var(--a); } .sw input:checked + i::after { left: 25px; }
-.pg { width: 120px; padding: 9px 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,.15); background: rgba(255,255,255,.06); color: #fff; font-size: 15px; text-align: center; }
-.vai { position: relative; overflow: hidden; width: 100%; height: 64px; border: none; border-radius: 18px; font-size: 20px; font-weight: 900; letter-spacing: 1px; color: #04210f;
-       background: linear-gradient(90deg, #30D158, #7CFFB0, #30D158); background-size: 200% 100%; animation: luce 3s linear infinite; box-shadow: 0 0 22px #30D15888; }
-.vai:disabled { filter: grayscale(1) brightness(.6); animation: none; box-shadow: none; }
-@keyframes luce { to { background-position: -200% 0; } }
-.vai .pr { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: rgba(255,255,255,.35); transition: width .2s; }
-.msg { min-height: 20px; text-align: center; font-size: 14px; font-weight: 700; }
-.msg.ok { color: var(--a); } .msg.ko { color: #FF453A; }
-.avv { display: none; padding: 10px 12px; border-radius: 14px; background: #FF9F0A22; border: 1px solid #FF9F0A; color: #FFD08A; font-size: 13px; font-weight: 700; }
-h3 { margin: 4px 2px 0; font-size: 12px; letter-spacing: 1px; color: var(--m); text-transform: uppercase; }
-.lv { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: rgba(255,255,255,.04); box-shadow: inset 0 0 0 1px rgba(255,255,255,.07); }
-.lv .n { flex: 1; min-width: 0; font-size: 14px; font-weight: 700; overflow-wrap: anywhere; } .lv .n small { display: block; color: var(--m); font-weight: 400; font-size: 12px; }
-.lv .n em { display: block; color: #FFB340; font-style: normal; font-weight: 600; font-size: 12px; }
-.pill { padding: 3px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 800; white-space: nowrap; border: 1px solid; color: #FFD60A; border-color: #FFD60A; }
-.p-stampa, .p-invio { color: var(--b); border-color: var(--b); animation: lamp 1s infinite; }
-.p-fatto { color: var(--a); border-color: var(--a); } .p-annullato { color: var(--m); border-color: var(--m); } .p-errore { color: #FF453A; border-color: #FF453A; }
-.x { border: none; background: #FF453A22; color: #FF6961; border-radius: 10px; padding: 6px 9px; font-weight: 800; font-size: 12px; }
-.vuoto { color: var(--m); font-size: 13px; text-align: center; padding: 8px; }
+
+.opts { margin-top: 8px; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--divider-color); }
+.row:last-child { border-bottom: 0; }
+.row .l { font-size: 15px; } .row .l small { display: block; font-size: 13px; color: var(--secondary-text-color); margin-top: 1px; }
+.step { display: inline-flex; align-items: center; border: 1px solid var(--divider-color); border-radius: 10px; padding: 3px; }
+.step button { width: 34px; height: 30px; border: 0; background: none; color: var(--primary-text-color); font-size: 18px; border-radius: 8px; cursor: pointer; }
+.step button:hover { background: rgba(127, 127, 127, .12); }
+.step output { min-width: 28px; text-align: center; font-size: 15px; font-weight: 600; }
+ha-switch { --primary-color: var(--sr-prim); --switch-checked-color: var(--sr-prim);
+  --ha-switch-checked-background-color: rgba(12, 138, 108, .14); --ha-switch-checked-border-color: var(--sr-prim);
+  --ha-switch-checked-thumb-background-color: var(--sr-prim); --ha-switch-checked-thumb-border-color: var(--sr-prim);
+  --ha-switch-checked-thumb-background-color-hover: var(--sr-prim); --ha-switch-checked-thumb-border-color-hover: var(--sr-prim); }
+.pg { width: 110px; height: 36px; padding: 0 10px; border: 1px solid var(--divider-color); border-radius: 10px; text-align: center;
+  background: none; color: var(--primary-text-color); font: inherit; font-size: 14px; }
+.pg:focus { outline: none; border-color: var(--sr-prim); }
+.go { position: relative; overflow: hidden; width: 100%; height: 44px; margin-top: 12px; border: 0; border-radius: 10px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--sr-prim); color: #fff; font-size: 15px; font-weight: 600; }
+.go:disabled { opacity: .4; cursor: default; }
+.go .p { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: rgba(255, 255, 255, .22); transition: width .2s; }
+.go > *:not(.p) { position: relative; }
+.msg { min-height: 18px; margin: 10px 0 0; font-size: 13px; text-align: center; color: var(--secondary-text-color); }
+.msg.ok { color: var(--sr-ok); } .msg.ko { color: var(--sr-err); }
+
+.job { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--divider-color); }
+.job:last-child { border-bottom: 0; padding-bottom: 0; } .job:first-child { padding-top: 0; }
+.job > ha-icon { color: var(--secondary-text-color); flex: none; }
+.job .n { flex: 1; min-width: 0; }
+.job .n b { display: block; font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.job .n span { display: block; font-size: 12px; color: var(--secondary-text-color); }
+.job .n em { display: block; font-size: 12px; font-style: normal; color: var(--sr-warn); margin-top: 1px; }
+.x { flex: none; width: 32px; height: 32px; border: 0; background: none; color: var(--secondary-text-color); border-radius: 50%; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; }
+.x:hover { background: rgba(127, 127, 127, .12); } .x ha-icon { --mdc-icon-size: 18px; }
+.empty { font-size: 14px; color: var(--secondary-text-color); }
 `;
 
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+const iconFor = name => /\.pdf$/i.test(name) ? 'mdi:file-pdf-box' : /\.(jpe?g|png|gif|heic|heif|webp|tiff?|bmp)$/i.test(name) ? 'mdi:file-image-outline'
+  : /\.(txt|md|csv|log)$/i.test(name) ? 'mdi:file-document-outline' : 'mdi:file-outline';
+const PILL = {fatto: 'up', errore: 'down', annullato: '', in_coda: 'warn', conversione: 'warn', invio: 'warn', stampa: 'warn'};
 
 class StampaRemotaPanel extends HTMLElement {
   set hass(h) { this._hass = h; if (!this._built) this._build(); }
-  set narrow(n) { this._narrow = n; if (this._bar) this._bar.style.display = n ? 'flex' : 'none'; }
+  set narrow(n) { this.toggleAttribute('narrow', !!n); }
 
-  connectedCallback() { if (this._hass && !this._built) this._build(); this._timer = setInterval(() => this._load(), 3000); }
+  connectedCallback() { if (this._hass && !this._built) this._build(); clearInterval(this._timer); this._timer = setInterval(() => this._load(), 3000); }
   disconnectedCallback() { clearInterval(this._timer); }
 
   _build() {
@@ -101,30 +137,33 @@ class StampaRemotaPanel extends HTMLElement {
     const T = this._T = I18N[lang]; this._lang = lang;
     const r = this.attachShadow({mode: 'open'});
     r.innerHTML = `<style>${CSS}</style>
-      <div class="bar" id="bar"><button id="menu" aria-label="menu"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg></button><span>${T.title}</span></div>
+      <div class="bar"><button id="menu" aria-label="Menu"><ha-icon icon="mdi:menu"></ha-icon></button><span class="t">${T.title}</span></div>
       <div class="wrap">
-        <div class="box"><div class="hd" id="hd">
-          <svg viewBox="0 0 76 40"><rect class="fo" x="27" y="2" width="22" height="10" rx="1"/><rect class="co" x="19" y="10" width="38" height="17" rx="4"/>
-            <rect class="fe" x="25" y="24" width="26" height="4" rx="1.5"/><g class="usc"><rect class="fo" x="27" y="25" width="22" height="9" rx="1"/>
-            <path class="ri" d="M30 28 H46 M30 31 H42"/></g><circle class="led" cx="51" cy="15" r="1.6"/></svg>
-          <div><b>${T.title}</b><span id="sub">${T.subtitle}</span></div></div>
-          <div class="ink" id="ink"></div></div>
-        <div class="avv" id="avv"></div>
-        <label class="drop" id="drop" for="file"><div class="ic">📄</div><b id="dt">${T.pick}</b><span id="ds">${T.pick_s}</span></label>
-        <input type="file" id="file">
-        <div class="box" style="padding:6px 16px">
-          <div class="riga"><label>${T.copies}</label><div class="step"><button type="button" id="meno">−</button><output id="cp">1</output><button type="button" id="piu">+</button></div></div>
-          <div class="riga" id="rmono"><label><span>${T.mono}</span><small>${T.mono_s}</small></label><label class="sw"><input type="checkbox" id="bn"><i></i></label></div>
-          <div class="riga"><label><span>${T.fit}</span><small>${T.fit_s}</small></label><label class="sw"><input type="checkbox" id="ad" checked><i></i></label></div>
-          <div class="riga"><label><span>${T.pages}</span><small>${T.pages_s}</small></label><input class="pg" id="pg" inputmode="numeric" placeholder="${T.all}"></div>
-        </div>
-        <button class="vai" id="vai" disabled><span class="pr" id="pr"></span><span style="position:relative">${T.print}</span></button>
-        <div class="msg" id="msg"></div>
-        <h3>${T.recent}</h3>
-        <div id="lista" style="display:flex;flex-direction:column;gap:8px"><div class="vuoto">…</div></div>
+        <ha-card>
+          <div class="pr-head"><div class="ico"><ha-icon icon="mdi:printer-outline"></ha-icon></div>
+            <div class="n"><b id="pname">${T.unknown}</b><span class="sec" id="pstate">…</span></div><span class="pill" id="ppill"></span></div>
+          <div class="inks" id="inks"></div>
+          <div class="alerts" id="alerts"></div>
+          <p class="note" id="pnote"></p>
+        </ha-card>
+        <ha-card id="form">
+          <h2>${T.new}</h2>
+          <label class="drop" for="file"><ha-icon icon="mdi:tray-arrow-up"></ha-icon><b>${T.pick}</b><span>${T.pick_s}</span></label>
+          <div class="file"><ha-icon id="ficon" icon="mdi:file-outline"></ha-icon><div class="n"><b id="fname"></b><span id="fsize"></span></div>
+            <label class="txt" for="file">${T.change}</label></div>
+          <input type="file" id="file">
+          <div class="opts">
+            <div class="row"><div class="l">${T.copies}</div><div class="step"><button type="button" id="meno" aria-label="-">−</button><output id="cp">1</output><button type="button" id="piu" aria-label="+">+</button></div></div>
+            <div class="row" id="rmono"><div class="l">${T.mono}<small>${T.mono_s}</small></div><ha-switch id="bn"></ha-switch></div>
+            <div class="row"><div class="l">${T.fit}<small>${T.fit_s}</small></div><ha-switch id="ad" checked></ha-switch></div>
+            <div class="row"><div class="l">${T.pages}<small>${T.pages_s}</small></div><input class="pg" id="pg" inputmode="numeric" placeholder="${T.all}"></div>
+          </div>
+          <button class="go" id="vai" disabled><span class="p" id="pr"></span><ha-icon icon="mdi:printer"></ha-icon><span>${T.print}</span></button>
+          <p class="msg" id="msg"></p>
+        </ha-card>
+        <ha-card><h2>${T.recent}</h2><div id="lista"><div class="empty">…</div></div></ha-card>
       </div>`;
     const $ = this._$ = id => r.getElementById(id);
-    this._bar = $('bar'); this._bar.style.display = this._narrow ? 'flex' : 'none';
     $('menu').onclick = () => this.dispatchEvent(new Event('hass-toggle-menu', {bubbles: true, composed: true}));
     // Android: a filtered picker can crash the HA app when coming back, so no "accept" there (the server checks the type)
     if (!/Android/i.test(navigator.userAgent)) $('file').setAttribute('accept', '.pdf,.txt,.heic,.heif,image/*,application/pdf,text/plain');
@@ -134,17 +173,16 @@ class StampaRemotaPanel extends HTMLElement {
     const kb = n => n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
     $('file').onchange = e => {
       const f = this._chosen = (e.target.files || [])[0] || null;
-      $('drop').classList.toggle('pieno', !!f);
-      $('dt').textContent = f ? f.name : T.pick;
-      $('ds').textContent = f ? kb(f.size) + ' · ' + T.change : T.pick_s;
-      $('vai').disabled = !f; this._msg('', true);
+      $('form').classList.toggle('chosen', !!f);
+      if (f) { $('fname').textContent = f.name; $('fsize').textContent = kb(f.size); $('ficon').setAttribute('icon', iconFor(f.name)); }
+      $('vai').disabled = !f; this._msg('');
     };
     $('vai').onclick = () => this._print();
     $('lista').onclick = e => { const b = e.target.closest('[data-cancel]'); if (b) this._cancel(b.dataset.cancel); };
     this._load();
   }
 
-  _msg(t, ok) { const m = this._$('msg'); m.textContent = t; m.className = 'msg ' + (t ? (ok ? 'ok' : 'ko') : ''); }
+  _msg(t, ok) { const m = this._$('msg'); m.textContent = t; m.className = 'msg' + (ok === true ? ' ok' : ok === false ? ' ko' : ''); }
 
   async _token() {
     const a = this._hass.auth;
@@ -163,20 +201,20 @@ class StampaRemotaPanel extends HTMLElement {
     x.open('POST', '/api/stampa_remota/stampa');
     x.setRequestHeader('Authorization', 'Bearer ' + await this._token());
     x.upload.onprogress = ev => { if (ev.lengthComputable) $('pr').style.width = (ev.loaded / ev.total * 100) + '%'; };
-    x.upload.onload = () => this._msg(T.converting, true);
+    x.upload.onload = () => this._msg(T.converting);
     x.onload = () => {
-      $('pr').style.width = '0'; $('vai').disabled = false;
+      $('pr').style.width = '0';
       let r; try { r = JSON.parse(x.responseText); } catch (e) { r = {ok: false, errore: T.weird + ' (' + x.status + ')'}; }
       if (r.ok) { $('file').value = ''; $('file').onchange({target: {files: []}}); this._msg(T.sent, true); }
-      else this._msg('✗ ' + (r.errore || T.error), false);
+      else { $('vai').disabled = false; this._msg(r.errore || T.error, false); }
       this._load();
     };
     x.onerror = () => { $('pr').style.width = '0'; $('vai').disabled = false; this._msg(T.lost, false); };
-    $('vai').disabled = true; this._msg(T.uploading, true); x.send(fd);
+    $('vai').disabled = true; this._msg(T.uploading); x.send(fd);
   }
 
   async _cancel(id) {
-    try { await this._hass.callApi('POST', 'stampa_remota/annulla', {id}); } catch (e) {}
+    try { await this._hass.callApi('POST', 'stampa_remota/annulla', {id}); } catch (e) { /* refreshed below */ }
     this._load();
   }
 
@@ -188,20 +226,31 @@ class StampaRemotaPanel extends HTMLElement {
       const r = await this._hass.callApi('GET', 'stampa_remota/stato');
       if (!this._monoSet) { $('bn').checked = !!r.bianco_nero_predefinito; this._monoSet = true; }
       $('rmono').style.display = r.colore === false ? 'none' : '';
-      const L = r.lavori || [];
+      $('pname').textContent = r.stampante || T.unknown;
+      const L = (r.lavori || []).slice(0, 8);
+      const printing = L.some(j => j.stato === 'stampa' || j.stato === 'invio');
+      const [st, cls] = !r.raggiungibile ? [T.offline, 'down'] : r.stato === 'stopped' ? [T.stopped, 'down']
+        : (printing || r.stato === 'processing') ? [T.busy, 'warn'] : [T.ready, 'up'];
+      $('pstate').textContent = r.carta ? `${T.paper} ${r.carta}` : '';
+      $('ppill').textContent = st; $('ppill').className = 'pill ' + cls;
+      $('pnote').textContent = r.raggiungibile ? '' : T.offline_s;
+      $('inks').innerHTML = r.raggiungibile ? (r.inchiostri || []).filter(i => i.livello !== null && i.livello >= 0).map(i => {
+        const low = i.livello < 15;
+        const fill = low ? 'var(--sr-err)' : (/black/i.test(i.nome) ? 'var(--primary-text-color)' : 'var(--sr-prim)');
+        return `<div class="ink"><div class="r"><span>${esc(T.ink[i.nome] || i.nome)}</span><b>${i.livello}%</b></div>
+          <div class="bar2"><i style="width:${Math.max(2, Math.min(100, i.livello))}%;background:${fill}"></i></div></div>`;
+      }).join('') : '';
+      const al = r.raggiungibile ? [...new Set((r.avvisi || []).map(a => T.al[a.replace(/-(warning|error|report)$/, '')]).filter(Boolean))] : [];
+      $('alerts').innerHTML = al.map(a => `<span class="pill warn">${esc(a)}</span>`).join('');
       $('lista').innerHTML = L.length ? L.map(j => {
-        const when = new Date(j.ora * 1000).toLocaleString(this._lang, {weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'});
+        const when = new Date(j.ora * 1000).toLocaleString(this._lang, {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'});
         const pag = j.pagine ? ` · ${j.pagine} ${j.pagine > 1 ? T.pageN : T.page1}` : '';
         const act = ['in_coda', 'invio', 'stampa', 'conversione'].includes(j.stato);
-        return `<div class="lv"><div class="n">${esc(j.nome)}<small>${when} · ${j.copie} ${j.copie > 1 ? T.copyN : T.copy1}${pag}${j.utente ? ' · ' + esc(j.utente) : ''}</small>${j.errore ? `<em>${esc(j.errore)}</em>` : ''}</div>
-          <span class="pill p-${j.stato}">${T.st[j.stato] || esc(j.stato)}</span>${act ? `<button class="x" data-cancel="${esc(j.id)}">✕</button>` : ''}</div>`;
-      }).join('') : `<div class="vuoto">${T.none}</div>`;
-      const al = r.raggiungibile ? (r.avvisi || []).map(a => T.al[a.replace(/-(warning|error|report)$/, '')]).filter(Boolean) : [T.unreachable];
-      $('avv').style.display = al.length ? 'block' : 'none'; $('avv').textContent = '⚠️ ' + [...new Set(al)].join(' · ');
-      $('ink').innerHTML = (r.inchiostri || []).filter(i => i.livello !== null && i.livello >= 0).map(i =>
-        `<div>${T.ink} ${esc(i.nome)} · ${i.livello}%<i><b style="width:${Math.max(2, i.livello)}%;background:${(c => /^#0{6}$/.test(c) ? '#d0d4dc' : c)(((i.colore || '').match(/#[0-9a-f]{6}/i) || ['#8a94a8'])[0])};${i.livello < 15 ? 'box-shadow:0 0 0 1px #FF453A' : ''}"></b></i></div>`).join('');
-      if (r.stampante) $('sub').textContent = r.stampante + ' · ' + T.subtitle;
-      $('hd').classList.toggle('lavora', L.some(j => j.stato === 'stampa' || j.stato === 'invio'));
+        return `<div class="job"><ha-icon icon="${iconFor(j.nome)}"></ha-icon>
+          <div class="n"><b>${esc(j.nome)}</b><span>${when} · ${j.copie} ${j.copie > 1 ? T.copyN : T.copy1}${pag}${j.utente ? ' · ' + esc(j.utente) : ''}</span>${j.errore ? `<em>${esc(j.errore)}</em>` : ''}</div>
+          <span class="pill ${PILL[j.stato] ?? ''}">${T.st[j.stato] || esc(j.stato)}</span>
+          ${act ? `<button class="x" data-cancel="${esc(j.id)}" aria-label="${T.cancel}" title="${T.cancel}"><ha-icon icon="mdi:close"></ha-icon></button>` : ''}</div>`;
+      }).join('') : `<div class="empty">${T.none}</div>`;
     } catch (e) { /* HA restarting or offline: try again at the next round */ }
     this._busy = false;
   }

@@ -42,6 +42,10 @@ SERVICE_SCHEMA = vol.Schema({
 })
 
 
+def _panel_mtime() -> float:
+    return (Path(__file__).parent / "frontend" / "stampa-remota-panel.js").stat().st_mtime
+
+
 def _opts(entry: ConfigEntry) -> dict:
     return {**entry.data, **entry.options}
 
@@ -61,13 +65,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.http.register_view(CancelView)
         hass.data[f"{DOMAIN}_http"] = True
 
+    mtime = int(await hass.async_add_executor_job(_panel_mtime))   # file access off the event loop
     await panel_custom.async_register_panel(
         hass,
         frontend_url_path=PANEL_URL,
         webcomponent_name="stampa-remota-panel",
         sidebar_title="Stampa",
         sidebar_icon="mdi:printer-wireless",
-        module_url=f"{STATIC_URL}/stampa-remota-panel.js?v={VERSION}",
+        # version = file date: a new panel reaches the browsers even without a new VERSION
+        module_url=f"{STATIC_URL}/stampa-remota-panel.js?v={VERSION}-{mtime}",
         require_admin=o.get(CONF_ADMIN_ONLY, False),
         config={},
     )
