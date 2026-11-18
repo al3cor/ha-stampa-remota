@@ -1,0 +1,36 @@
+stampa:
+  fields:
+    file:
+      example: /config/www/documento.pdf
+      selector:
+        text:
+    url:
+      example: https://example.com/documento.pdf
+      selector:
+        text:
+          type: url
+    testo:
+      selector:
+        text:
+          multiline: true
+    nome:
+      selector:
+        text:
+    copie:
+      default: 1
+      selector:
+        number:
+          min: 1
+          max: 50
+          mode: box
+    pagine:
+      example: 1-3,5
+      selector:
+        text:
+    adatta:
+      default: true
+      selector:
+        boolean:
+    bianco_nero:
+      selector:
+        boolean:
