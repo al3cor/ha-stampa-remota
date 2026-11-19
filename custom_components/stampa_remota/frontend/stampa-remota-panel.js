@@ -168,6 +168,9 @@ const iconFor = name => /\.pdf$/i.test(name) ? 'mdi:file-pdf-box' : /\.(jpe?g|pn
   : /\.(txt|md|csv|log)$/i.test(name) ? 'mdi:file-document-outline' : 'mdi:file-outline';
 const PILL = {fatto: 'up', errore: 'down', annullato: '', in_coda: 'warn', conversione: 'warn', invio: 'warn', stampa: 'warn'};
 const ACTIVE = ['in_coda', 'invio', 'stampa', 'conversione'];
+const OLD_ALERTS = {'media-empty': 'Carta finita', 'media-needed': 'Carta finita', 'media-jam': 'Foglio inceppato', 'door-open': 'Sportello aperto',
+  'cover-open': 'Coperchio aperto', 'marker-supply-low': 'Inchiostro in esaurimento', 'marker-supply-empty': 'Inchiostro finito',
+  'toner-low': 'Toner in esaurimento', 'toner-empty': 'Toner finito'};
 const store = {get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } },
                set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* private mode */ } }};
 
@@ -435,7 +438,13 @@ class StampaRemotaPanel extends HTMLElement {
     const $ = this._$, T = this._T;
     try {
       const r = await this._hass.callApi('GET', 'stampa_remota/stato');
-      this._printers = r.stampanti || [];
+      // answer of a version < 1.2.0 still running until Home Assistant restarts: one printer, alerts as codes
+      this._printers = r.stampanti || [{id: '', nome: r.stampante, modello: r.stampante, raggiungibile: r.raggiungibile,
+        errore: r.errore, stato: r.stato, inchiostri: r.inchiostri, colore: r.colore, carta: r.carta,
+        foglio_pt: [595.28, 841.89], margine_pt: 12, bianco_nero_predefinito: r.bianco_nero_predefinito, vecchia: true,
+        avvisi: (r.avvisi || []).map(a => ({testo: OLD_ALERTS[a.replace(/-(warning|error|report)$/, '')], grave: /-error$/.test(a)}))
+          .filter(a => a.testo)}];
+      $('prevbtn').style.visibility = this._printers[0] && this._printers[0].vecchia ? 'hidden' : '';
       const L = this._jobs = (r.lavori || []).slice(0, 10);
       this._renderPrinter();
       const many = this._printers.length > 1;
