@@ -10,14 +10,23 @@ stesse funzioni, ma senza CUPS e senza container in più.
 
 ## Cosa fa
 
-- Voce **Stampa** nel menu laterale di Home Assistant (grafica sobria, colori del tema di HA, chiaro e scuro): scegli il file, copie, bianco e nero, adatta al foglio, pagine e premi
-  **STAMPA A CASA**. Funziona ovunque funzioni Home Assistant (app, Nabu Casa, VPN): passa dall'accesso di HA, nessuna porta aperta.
-- Anche per gli utenti **non amministratori** (opzione "Pannello solo per gli amministratori" spenta).
+- Voce **Stampa** nel menu laterale di Home Assistant (grafica sobria, colori del tema di HA, chiaro e scuro): scegli il file,
+  copie, bianco e nero, adatta al foglio, pagine e premi **Stampa**. Funziona ovunque funzioni Home Assistant (app, Nabu Casa,
+  VPN): passa dall'accesso di HA, nessuna porta aperta.
+- **Anteprima e posizione**: il foglio con il limite di stampa della tua stampante e la pagina sopra; verticale/orizzontale,
+  scala dal 5 al 300 %, Adatta, Centra, 100 %, trascini la pagina col dito, frecce per sfogliare i PDF di più pagine.
+  La stampa esce esattamente come nell'anteprima.
+- **Più stampanti**: aggiungi l'integrazione una volta per stampante; il pannello mostra un selettore (ricordato su ogni telefono)
+  e l'elenco dice dove è andata ogni stampa.
+- Anche per gli utenti **non amministratori** (opzione "Pannello solo per gli amministratori" spenta), ognuno col suo login.
 - Accetta **PDF, foto (JPG, PNG, HEIC dell'iPhone) e testo**.
-- Elenco delle ultime stampe con stato in tempo reale (In coda → Invio → Stampa → Stampato ✓), annulla, chi ha stampato.
-- Livelli d'inchiostro/toner e avvisi della stampante (carta finita, inchiostro, sportello aperto).
-- Azione **`stampa_remota.stampa`** per le automazioni: stampa un file, un indirizzo web o un testo.
-- Evento **`stampa_remota_evento`** a ogni cambio di stato (per avvisi o automazioni).
+- Elenco delle ultime stampe con stato in tempo reale, chi ha stampato, annulla, **cestino** per toglierne una e **Svuota**.
+- Livelli d'inchiostro/toner e avvisi della stampante **in italiano** (carta finita, foglio inceppato, sportello aperto...).
+  Se una stampa si ferma, il motivo compare sulla stampa stessa e parte l'evento per le notifiche.
+- Indirizzo sbagliato? La configurazione dice **perché** (porta sbagliata, percorso, autenticazione IPP, TLS, stampante
+  spenta, formati offerti) invece di un generico "non risponde".
+- Azione **`stampa_remota.stampa`** per le automazioni: stampa un file, un indirizzo web o un testo, su una stampante a scelta.
+- Evento **`stampa_remota_evento`** a ogni cambio di stato (`stato`, `avviso`, `errore`, `nome`, `stampante`, `utente`).
 - Se la stampante è spenta o occupata il lavoro resta in coda e riparte da solo (fino a 6 ore).
 
 ## Come funziona (senza CUPS)
@@ -31,9 +40,10 @@ La stampante dichiara via IPP i formati che accetta e l'integrazione sceglie da 
 
 | La stampante accetta | Cosa viene inviato |
 |---|---|
-| PDF | il PDF così com'è (foto e testo diventano PDF) |
-| URF (AirPrint) | pagine disegnate con PDFium e codificate in Apple raster, **un solo lavoro** per tutte le pagine |
-| solo JPEG | un JPEG per pagina (anche le foto vanno sempre in JPEG: 50 volte più leggero del raster) |
+| PDF | il PDF così com'è; con l'anteprima, foto o testo: i fogli impaginati come PDF |
+| URF (AirPrint) | pagine disegnate con PDFium in Apple raster, **un solo lavoro**, intestazione identica a macOS |
+| PWG raster (IPP Everywhere) | pagine in PWG raster, un solo lavoro |
+| JPEG | un JPEG per foglio (le foto vanno sempre in JPEG quando si può: 50 volte più leggero del raster) |
 
 Pensato per le stampanti AirPrint che **non accettano PDF** (molte inkjet Canon, Epson, HP economiche).
 Non serve nessun driver. Le laser Brother senza AirPrint (che nell'app originale usano `brlaser`) **non** sono supportate.
@@ -89,17 +99,22 @@ actions:
 
 Per `file:` il percorso deve stare in `allowlist_external_dirs` (es. `/config/www`).
 
-## Differenze dall'app originale
+## Differenze dall'app originale (Remote Print 1.6.0)
 
 | | App Remote Print | Integrazione Stampa remota |
 |---|---|---|
 | Installazione | Store delle app (solo HA OS / Supervised) | HACS (anche Docker / Core) |
 | Conversione | CUPS + Ghostscript in un container | Python (PDFium, Pillow) dentro HA |
-| Utenti non amministratori | solo con `lan_access` dalla rete di casa, senza password | sì, con il login di HA, anche da fuori |
-| Automazioni | no | azione `stampa_remota.stampa` + evento |
-| File caricati | salvati su disco per N giorni | solo in memoria fino all'invio |
-| Brother senza AirPrint (`brlaser`) | sì | no |
-| Fronte/retro | sì | quando la stampante lo dichiara (prossima versione) |
+| Anteprima, scala, posizione | sì (1.4.0) | sì |
+| Più stampanti | sì (1.3.0) | sì, una voce per stampante |
+| Cestino e Svuota | sì (1.4.1) | sì |
+| Diagnosi dell'indirizzo | nel Registro dell'app (1.5.1) | nel modulo di configurazione |
+| Intestazione URF come macOS | sì (1.6.0, filtro su CUPS) | sì, scritta così dall'inizio |
+| Utenti non amministratori | elenco di nomi (1.5.0) | tutti gli utenti di HA, oppure solo amministratori |
+| Automazioni, evento, avvisi in italiano | no | sì |
+| File caricati | salvati su disco per N giorni | solo in memoria (anteprima: 30 minuti) |
+| Brother laser senza AirPrint (`brlaser`) | sì | no (serve un driver CUPS) |
+| Fronte/retro | sì | non ancora |
 
 ---
 

@@ -5,6 +5,8 @@ No CUPS: the document is sent straight to the printer in a format it declares (P
 """
 from __future__ import annotations
 
+import socket
+import ssl
 import struct
 from dataclasses import dataclass, field
 from typing import Any
@@ -45,7 +47,23 @@ PRINTER_ATTRS = [
     "printer-make-and-model", "printer-state", "printer-state-reasons", "document-format-supported",
     "urf-supported", "sides-supported", "media-supported", "print-color-mode-supported",
     "marker-names", "marker-levels", "marker-colors", "marker-types", "copies-supported",
+    "pwg-raster-document-resolution-supported", "pwg-raster-document-type-supported",
+    "media-left-margin-supported", "media-right-margin-supported", "media-top-margin-supported",
+    "media-bottom-margin-supported",
 ]
+
+T_RESOLUTION = 0x32
+
+# IPP status -> plain words (Italian), for the setup form and the panel
+STATUS_HINTS = {
+    0x0400: "la stampante non capisce la richiesta: prova un altro percorso (/ipp/print, /ipp, /ipp/printer)",
+    0x0401: "la stampante rifiuta di descriversi: nella sua pagina web consenti le operazioni IPP",
+    0x0402: "l'IPP chiede utente e password: disattiva l'autenticazione IPP nella pagina web della stampante",
+    0x0403: "accesso IPP limitato: nella pagina web della stampante consenti l'IPP dall'indirizzo di Home Assistant",
+    0x0406: "percorso sbagliato: prova /ipp/print, /ipp oppure /ipp/printer",
+    0x0501: "IPP spento o limitato sulla stampante: attivalo nella sua pagina web",
+    0x0503: "la stampante parla solo una versione vecchia di IPP",
+}
 
 
 class IppError(Exception):
@@ -145,10 +163,46 @@ def decode_response(data: bytes) -> IppResponse:
             value = raw == b"\x01"
         elif tag == T_RANGE and vl == 8:
             value = struct.unpack(">ii", raw)
+        elif tag == T_RESOLUTION and vl == 9:
+            value = struct.unpack(">iib", raw)   # x, y, units (3 = dpi)
         else:
             value = raw.decode(errors="replace")
         current.setdefault(name, []).append(value)
     return resp
+
+
+def explain_connection_error(err: BaseException, uri: str) -> str:
+    """Why the printer cannot be reached, in plain words (like Remote Print's ippcheck, without printing)."""
+    secure = uri.lower().startswith("ipps://")
+    if isinstance(err, aiohttp.ClientSSLError) or isinstance(getattr(err, "os_error", None), ssl.SSLError):
+        return ("la connessione cifrata (ipps) non riesce: controlla SSL/TLS nella pagina web della stampante "
+                "oppure usa ipp:// al posto di ipps://")
+    if isinstance(err, aiohttp.ServerDisconnectedError):
+        return ("la stampante ha chiuso la connessione" + (": con ipps:// di solito sono le impostazioni SSL/TLS, "
+                "prova ipp://" if secure else ""))
+    if isinstance(err, aiohttp.ClientConnectorError):
+        os_err = getattr(err, "os_error", None)
+        if isinstance(os_err, ConnectionRefusedError):
+            return "nessuno risponde su quella porta: IPP spento sulla stampante o porta sbagliata (IPP usa 631)"
+        if isinstance(os_err, socket.gaierror):
+            return "nome della stampante sconosciuto: usa il suo indirizzo IP"
+        return "stampante non raggiungibile: è accesa? L'indirizzo IP è giusto?"
+    if isinstance(err, TimeoutError):
+        return "nessuna risposta: stampante spenta, in risparmio energetico o indirizzo IP sbagliato"
+    return f"stampante non raggiungibile ({err.__class__.__name__})"
+
+
+def check_uri(uri: str) -> str | None:
+    """Mistakes that need no network to spot."""
+    scheme = uri.split("://", 1)[0].lower() if "://" in uri else ""
+    if scheme not in ("ipp", "ipps"):
+        return f"'{uri}' non è un indirizzo IPP: scrivi ipp://IP-STAMPANTE/ipp/print (oppure ipps://)"
+    hostport = uri.split("://", 1)[1].split("/", 1)[0]
+    if hostport.rsplit(":", 1)[-1] in ("9100", "515"):
+        return f"la porta {hostport.rsplit(':', 1)[-1]} è stampa diretta/LPD, non IPP: toglila (IPP usa 631)"
+    if not hostport.split(":")[0]:
+        return "manca l'indirizzo della stampante"
+    return None
 
 
 class IppClient:
@@ -172,14 +226,23 @@ class IppClient:
                 self._url, data=body, headers={"Content-Type": "application/ipp"},
                 timeout=aiohttp.ClientTimeout(total=timeout), ssl=False,
             ) as r:
+                if r.status == 401:
+                    raise IppError("la stampante chiede utente e password per l'IPP: disattiva l'autenticazione IPP "
+                                   "nella sua pagina web")
                 if r.status != 200:
-                    raise IppError(f"HTTP {r.status} dalla stampante")
-                resp = decode_response(await r.read())
+                    raise IppError(f"HTTP {r.status}: percorso sbagliato? Prova /ipp/print, /ipp oppure /ipp/printer")
+                data = await r.read()
+                if len(data) < 8:
+                    raise IppError("risposta vuota: percorso sbagliato? Prova /ipp/print, /ipp oppure /ipp/printer")
+                resp = decode_response(data)
+        except IppError:
+            raise
         except (aiohttp.ClientError, TimeoutError, OSError) as err:
-            raise IppError(f"stampante non raggiungibile ({err.__class__.__name__})") from err
+            raise IppError(explain_connection_error(err, self.uri)) from err
         if resp.status >= 0x0400:
             msg = resp.group(TAG_OPERATION).get("status-message", [""])[0]
-            raise IppError(f"errore IPP 0x{resp.status:04x} {msg}".strip(), resp.status)
+            hint = STATUS_HINTS.get(resp.status, msg or "la stampante ha rifiutato la richiesta")
+            raise IppError(f"{hint} (IPP 0x{resp.status:04x})", resp.status)
         return resp
 
     async def printer_attributes(self) -> dict[str, list[Any]]:

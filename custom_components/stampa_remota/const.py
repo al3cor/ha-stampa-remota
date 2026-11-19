@@ -1,8 +1,9 @@
 """Constants of Stampa remota."""
 DOMAIN = "stampa_remota"
-VERSION = "1.1.1"
+VERSION = "1.2.0"
 
 CONF_URI = "printer_uri"
+CONF_NAME = "nome"
 CONF_PAPER = "paper"
 CONF_MONO = "monochrome_default"
 CONF_ADMIN_ONLY = "admin_only"

@@ -1,4 +1,5 @@
-"""Config flow: printer address (checked over IPP), paper, defaults."""
+"""Config flow: one entry per printer. The address is checked over IPP (read-only, nothing is printed) and,
+if it does not work, the form says why in plain words (like Remote Print's ippcheck)."""
 from __future__ import annotations
 
 from typing import Any
@@ -10,8 +11,10 @@ from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import SelectSelector, SelectSelectorConfig, SelectSelectorMode
 
-from .const import CONF_ADMIN_ONLY, CONF_MONO, CONF_PAPER, CONF_URI, DOMAIN, PAPERS
-from .ipp import IppClient, IppError
+from .const import CONF_ADMIN_ONLY, CONF_MONO, CONF_NAME, CONF_PAPER, CONF_URI, DOMAIN, PAPERS
+from .ipp import IppClient, IppError, check_uri
+
+DRIVERLESS = ("application/pdf", "image/urf", "image/pwg-raster", "image/jpeg")
 
 
 def _normalize(uri: str) -> str:
@@ -22,13 +25,17 @@ def _normalize(uri: str) -> str:
 
 
 async def _probe(hass, uri: str) -> tuple[str | None, str]:
+    """-> (problem in plain words or None, printer model)."""
+    if bad := check_uri(uri):
+        return bad, ""
     try:
         attrs = await IppClient(async_get_clientsession(hass, verify_ssl=False), uri).printer_attributes()
-    except IppError:
-        return "cannot_connect", ""
+    except IppError as err:
+        return str(err), ""
     fmts = attrs.get("document-format-supported", [])
-    if not any(f in fmts for f in ("application/pdf", "image/urf", "image/jpeg")):
-        return "no_driverless", ""
+    if not any(f in fmts for f in DRIVERLESS):
+        return ("la stampante risponde ma non offre nessun formato senza driver (PDF, URF, PWG o JPEG): "
+                f"formati dichiarati {', '.join(fmts) or 'nessuno'}"), ""
     return None, attrs.get("printer-make-and-model", ["Stampante"])[0]
 
 
@@ -46,36 +53,47 @@ class StampaRemotaConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         errors: dict[str, str] = {}
+        placeholders = {"dettaglio": ""}
         if user_input is not None:
             uri = _normalize(user_input[CONF_URI])
-            err, model = await _probe(self.hass, uri)
-            if err:
-                errors["base"] = err
+            self._async_abort_entries_match({CONF_URI: uri})
+            problem, model = await _probe(self.hass, uri)
+            if problem:
+                errors["base"] = "diagnosi"
+                placeholders["dettaglio"] = problem
             else:
-                await self.async_set_unique_id(DOMAIN)
-                self._abort_if_unique_id_configured()
-                return self.async_create_entry(title=model, data={**user_input, CONF_URI: uri})
+                name = (user_input.get(CONF_NAME) or "").strip() or model
+                return self.async_create_entry(title=name, data={**user_input, CONF_URI: uri, CONF_NAME: name})
         d = user_input or {}
         return self.async_show_form(
             step_id="user",
-            data_schema=vol.Schema({vol.Required(CONF_URI, default=d.get(CONF_URI, "")): str, **_options_schema(d)}),
-            errors=errors,
+            data_schema=vol.Schema({
+                vol.Required(CONF_URI, default=d.get(CONF_URI, "")): str,
+                vol.Optional(CONF_NAME, default=d.get(CONF_NAME, "")): str,
+                **_options_schema(d)}),
+            errors=errors, description_placeholders=placeholders,
         )
 
     async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         entry = self._get_reconfigure_entry()
         errors: dict[str, str] = {}
+        placeholders = {"dettaglio": ""}
         if user_input is not None:
             uri = _normalize(user_input[CONF_URI])
-            err, model = await _probe(self.hass, uri)
-            if err:
-                errors["base"] = err
+            problem, _ = await _probe(self.hass, uri)
+            if problem:
+                errors["base"] = "diagnosi"
+                placeholders["dettaglio"] = problem
             else:
-                return self.async_update_reload_and_abort(entry, title=model, data_updates={CONF_URI: uri})
+                name = (user_input.get(CONF_NAME) or "").strip() or entry.title
+                return self.async_update_reload_and_abort(entry, title=name,
+                                                          data_updates={CONF_URI: uri, CONF_NAME: name})
         return self.async_show_form(
             step_id="reconfigure",
-            data_schema=vol.Schema({vol.Required(CONF_URI, default=entry.data[CONF_URI]): str}),
-            errors=errors,
+            data_schema=vol.Schema({
+                vol.Required(CONF_URI, default=entry.data[CONF_URI]): str,
+                vol.Optional(CONF_NAME, default=entry.data.get(CONF_NAME, entry.title)): str}),
+            errors=errors, description_placeholders=placeholders,
         )
 
     @staticmethod

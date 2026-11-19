@@ -3,25 +3,28 @@
     "step": {
       "user": {
         "title": "Remote Print",
-        "description": "IPP address of the printer (AirPrint / IPP Everywhere). Usually ipp://PRINTER-IP/ipp/print; just the IP also works.",
+        "description": "IPP address of the printer (AirPrint / IPP Everywhere). Usually ipp://PRINTER-IP/ipp/print; just the IP also works. You can add more printers: one entry each.",
         "data": {
           "printer_uri": "Printer address",
           "paper": "Paper size",
           "monochrome_default": "Black and white by default",
-          "admin_only": "Panel only for administrators"
+          "admin_only": "Panel only for administrators",
+          "nome": "Name (optional, e.g. Office)"
         }
       },
       "reconfigure": {
         "title": "Printer address",
-        "data": { "printer_uri": "Printer address" }
+        "data": {
+          "printer_uri": "Printer address",
+          "nome": "Name"
+        }
       }
     },
     "error": {
-      "cannot_connect": "The printer does not answer at this address. Is it on? Try ipp://IP/ipp/print, ipps://IP/ipp/print or ipp://IP/ipp.",
-      "no_driverless": "The printer answers but accepts neither PDF, URF nor JPEG: it is not AirPrint / IPP Everywhere."
+      "diagnosi": "Not working: {dettaglio}"
     },
     "abort": {
-      "already_configured": "Remote Print is already configured.",
+      "already_configured": "This printer is already configured.",
       "reconfigure_successful": "Printer address updated."
     }
   },
@@ -42,14 +45,42 @@
       "name": "Print",
       "description": "Prints a file, a URL or a text on the home printer.",
       "fields": {
-        "file": { "name": "File", "description": "Path of a file inside Home Assistant (must be in allowlist_external_dirs), e.g. /config/www/doc.pdf." },
-        "url": { "name": "URL", "description": "Address of a file to download and print." },
-        "testo": { "name": "Text", "description": "Text to print." },
-        "nome": { "name": "Name", "description": "Name shown in the list of prints." },
-        "copie": { "name": "Copies", "description": "Number of copies." },
-        "pagine": { "name": "Pages", "description": "Empty = all, e.g. 1-3,5." },
-        "adatta": { "name": "Fit to page", "description": "Shrink the page into the printable area." },
-        "bianco_nero": { "name": "Black and white", "description": "Print in grayscale (default from the options)." }
+        "file": {
+          "name": "File",
+          "description": "Path of a file inside Home Assistant (must be in allowlist_external_dirs), e.g. /config/www/doc.pdf."
+        },
+        "url": {
+          "name": "URL",
+          "description": "Address of a file to download and print."
+        },
+        "testo": {
+          "name": "Text",
+          "description": "Text to print."
+        },
+        "nome": {
+          "name": "Name",
+          "description": "Name shown in the list of prints."
+        },
+        "copie": {
+          "name": "Copies",
+          "description": "Number of copies."
+        },
+        "pagine": {
+          "name": "Pages",
+          "description": "Empty = all, e.g. 1-3,5."
+        },
+        "adatta": {
+          "name": "Fit to page",
+          "description": "Shrink the page into the printable area."
+        },
+        "bianco_nero": {
+          "name": "Black and white",
+          "description": "Print in grayscale (default from the options)."
+        },
+        "stampante": {
+          "name": "Printer",
+          "description": "Printer name (empty = the first one)."
+        }
       }
     }
   }

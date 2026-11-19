@@ -3,25 +3,28 @@
     "step": {
       "user": {
         "title": "Stampa remota",
-        "description": "Indirizzo IPP della stampante (AirPrint / IPP Everywhere). Di solito ipp://IP-STAMPANTE/ipp/print; va bene anche solo l'IP.",
+        "description": "Indirizzo IPP della stampante (AirPrint / IPP Everywhere). Di solito ipp://IP-STAMPANTE/ipp/print; va bene anche solo l'IP. Puoi aggiungere più stampanti: una voce per ciascuna.",
         "data": {
           "printer_uri": "Indirizzo stampante",
           "paper": "Formato carta",
           "monochrome_default": "Bianco e nero come predefinito",
-          "admin_only": "Pannello solo per gli amministratori"
+          "admin_only": "Pannello solo per gli amministratori",
+          "nome": "Nome (facoltativo, es. Studio)"
         }
       },
       "reconfigure": {
         "title": "Indirizzo stampante",
-        "data": { "printer_uri": "Indirizzo stampante" }
+        "data": {
+          "printer_uri": "Indirizzo stampante",
+          "nome": "Nome"
+        }
       }
     },
     "error": {
-      "cannot_connect": "La stampante non risponde a questo indirizzo. È accesa? Prova ipp://IP/ipp/print, ipps://IP/ipp/print oppure ipp://IP/ipp.",
-      "no_driverless": "La stampante risponde ma non accetta né PDF, né URF, né JPEG: non è AirPrint / IPP Everywhere."
+      "diagnosi": "Non funziona: {dettaglio}"
     },
     "abort": {
-      "already_configured": "Stampa remota è già configurata.",
+      "already_configured": "Questa stampante è già configurata.",
       "reconfigure_successful": "Indirizzo della stampante aggiornato."
     }
   },
@@ -42,14 +45,42 @@
       "name": "Stampa",
       "description": "Stampa un file, un indirizzo web o un testo sulla stampante di casa.",
       "fields": {
-        "file": { "name": "File", "description": "Percorso di un file dentro Home Assistant (deve stare in allowlist_external_dirs), es. /config/www/doc.pdf." },
-        "url": { "name": "URL", "description": "Indirizzo di un file da scaricare e stampare." },
-        "testo": { "name": "Testo", "description": "Testo da stampare." },
-        "nome": { "name": "Nome", "description": "Nome mostrato nell'elenco delle stampe." },
-        "copie": { "name": "Copie", "description": "Numero di copie." },
-        "pagine": { "name": "Pagine", "description": "Vuoto = tutte, es. 1-3,5." },
-        "adatta": { "name": "Adatta al foglio", "description": "Rimpicciolisce la pagina dentro i margini stampabili." },
-        "bianco_nero": { "name": "Bianco e nero", "description": "Stampa in scala di grigi (predefinito dalle opzioni)." }
+        "file": {
+          "name": "File",
+          "description": "Percorso di un file dentro Home Assistant (deve stare in allowlist_external_dirs), es. /config/www/doc.pdf."
+        },
+        "url": {
+          "name": "URL",
+          "description": "Indirizzo di un file da scaricare e stampare."
+        },
+        "testo": {
+          "name": "Testo",
+          "description": "Testo da stampare."
+        },
+        "nome": {
+          "name": "Nome",
+          "description": "Nome mostrato nell'elenco delle stampe."
+        },
+        "copie": {
+          "name": "Copie",
+          "description": "Numero di copie."
+        },
+        "pagine": {
+          "name": "Pagine",
+          "description": "Vuoto = tutte, es. 1-3,5."
+        },
+        "adatta": {
+          "name": "Adatta al foglio",
+          "description": "Rimpicciolisce la pagina dentro i margini stampabili."
+        },
+        "bianco_nero": {
+          "name": "Bianco e nero",
+          "description": "Stampa in scala di grigi (predefinito dalle opzioni)."
+        },
+        "stampante": {
+          "name": "Stampante",
+          "description": "Nome della stampante (vuoto = la prima)."
+        }
       }
     }
   }

@@ -1,5 +1,9 @@
 stampa:
   fields:
+    stampante:
+      example: Canon
+      selector:
+        text:
     file:
       example: /config/www/documento.pdf
       selector:
