@@ -202,7 +202,9 @@ def urf_page(img: Image.Image, dpi: int, quality: int = 4) -> bytes:
     a = np.asarray(img)
     bpp = 1 if img.mode == "L" else 3
     h, w = a.shape[0], a.shape[1]
-    header = bytes([8 * bpp, 0 if bpp == 1 else 1, 1, quality]) + b"\x00" * 8
+    # same bytes macOS / iOS write: one-sided = 0 (CUPS writes 1 and some printers then feed blank or garbage sheets,
+    # found by Gapman1980 in Remote Print 1.6.0, issue #2); the file header carries the real page count
+    header = bytes([8 * bpp, 0 if bpp == 1 else 1, 0, quality]) + b"\x00" * 8
     header += np.array([w, h, dpi, 0, 0], dtype=">u4").tobytes()
     same = np.all((a[1:] == a[:-1]).reshape(h - 1, -1), axis=1)
     out = [header]
