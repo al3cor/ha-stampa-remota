@@ -2,7 +2,8 @@
 
 Each printer has its own queue: files are converted in an executor (PDFium is not thread-safe, so one conversion at
 a time), sent one job at a time and followed until the printer says it is done. If the printer is busy or off the
-job waits and is retried (like CUPS printer-error-policy=retry-job). While a job is stopped, the printer's reasons
+job waits and is retried (like CUPS printer-error-policy=retry-job). If the connection breaks after the document was
+sent, the printer is asked (Get-Jobs) whether it has it: it is never sent twice blindly. While a job is stopped, the printer's reasons
 (paper, jam, door ...) are written on the job in plain Italian and fired as an event (for notifications).
 """
 from __future__ import annotations
@@ -27,6 +28,8 @@ _LOGGER = logging.getLogger(__name__)
 
 RETRY_BUSY = 10            # s between attempts while the printer works on another job
 RETRY_OFFLINE = 60         # s between attempts while the printer is off / asleep
+VERIFY_TRIES = 3           # times the printer is asked for a job whose sending was interrupted
+VERIFY_WAIT = 5            # s between them
 GIVE_UP = 6 * 3600         # after this the job is dropped
 FOLLOW_MAX = 2 * 3600      # stop following a sent job after this
 KEEP = 30                  # prints in the history
@@ -355,12 +358,29 @@ class PrintHub:
         while True:
             if job["stato"] == "annullato":
                 return None
+            sending = False
             try:
+                if await self._stopped(conn, job):          # paper, jam, door ...: sending now would only hang
+                    if time.time() - start > GIVE_UP:
+                        raise IppError("la stampante è rimasta ferma per 6 ore", 0)
+                    await asyncio.sleep(RETRY_BUSY)
+                    continue
+                known = await self._known_jobs(conn)
+                if job["stato"] == "annullato":
+                    return None
                 use = [a for a in attrs if a[1] in ("media", "copies")] if drop_attrs else attrs
-                return await conn.client.print_job(name, fmt, use, data)
+                sending = True
+                return await self._unless_cancelled(conn, job, await conn.client.print_job(name, fmt, use, data))
             except IppError as err:
+                if sending and err.status is None and err.sent:
+                    found = await self._verify(conn, job, name, known, start)
+                    if found is not None:
+                        return await self._unless_cancelled(conn, job, found)
+                if job["stato"] == "annullato":
+                    return None
                 if err.status == STATUS_BUSY:
                     wait, why = RETRY_BUSY, "Stampante occupata, riprovo"
+                    await self._set_warning(conn, job)
                 elif err.status is None:
                     wait, why = RETRY_OFFLINE, "Stampante spenta o non raggiungibile, riprovo da sola"
                 elif not drop_attrs and err.status in (0x040B, 0x0400):   # attributes not supported: plain job
@@ -374,6 +394,77 @@ class PrintHub:
                     job["errore"] = why
                     self._fire(job)
                 await asyncio.sleep(wait)
+
+    async def _stopped(self, conn: PrinterConn, job: dict[str, Any]) -> bool:
+        """True if the printer is stopped and needs someone; the reason is written on the job."""
+        a = await self.refresh(conn, max_age=8)
+        if conn.error or a.get("printer-state", [0])[0] != 5:
+            if job.get("avviso") and not conn.error:        # solved
+                job["avviso"] = ""
+                self._fire(job)
+            return False
+        await self._set_warning(conn, job)
+        return bool(job.get("avviso"))
+
+    async def _known_jobs(self, conn: PrinterConn) -> dict[int, str] | None:
+        """Jobs in the printer, by id. None = the printer does not tell; raises if it cannot be reached."""
+        out: dict[int, str] = {}
+        for which in ("not-completed", "completed"):
+            try:
+                out.update(await conn.client.jobs(which))
+            except IppError as err:
+                if err.status is None:
+                    raise
+                return None
+        return out
+
+    async def _unless_cancelled(self, conn: PrinterConn, job: dict[str, Any], job_id: int) -> int | None:
+        """Cancelled while it was being sent: take it back from the printer too."""
+        if job["stato"] != "annullato":
+            return job_id
+        try:
+            await conn.client.cancel(job_id)
+        except IppError as err:
+            _LOGGER.debug("Cancel-Job %s: %s", job_id, err)
+        return None
+
+    async def _verify(self, conn: PrinterConn, job: dict[str, Any], name: str, known: dict[int, str] | None,
+                      start: float) -> int | None:
+        """The answer to Print-Job never came: did the printer get the document?
+
+        Returns its job id, or None if it surely did not (safe to send again). Raises if nobody can tell: better to
+        ask the person than to print twice.
+        """
+        unsure = IppError("esito incerto: la stampante può aver già ricevuto il documento. "
+                          "Guarda se il foglio è uscito prima di rimandarlo", 0)
+        if known is None:
+            raise unsure
+        tries, history = 0, False
+        while tries < VERIFY_TRIES:
+            try:
+                now = await self._known_jobs(conn)
+            except IppError:                        # off or asleep: ask again when it is back
+                if time.time() - start > GIVE_UP:
+                    raise unsure from None
+                why = "Invio interrotto: controllo se la stampante l'ha ricevuto"
+                if job.get("errore") != why and job["stato"] != "annullato":
+                    job["errore"] = why
+                    self._fire(job)
+                await asyncio.sleep(RETRY_OFFLINE)
+                continue
+            if now is None:
+                raise unsure
+            new = [i for i, n in now.items() if i not in known and n and
+                   (name[:100].startswith(n) or n.startswith(name[:100]))]
+            if new:
+                return max(new)
+            history = history or any(i in now for i in known)
+            tries += 1
+            if tries < VERIFY_TRIES:
+                await asyncio.sleep(VERIFY_WAIT)
+        if not history:                             # it forgets finished jobs: absence proves nothing
+            raise unsure
+        return None
 
     async def _worker(self, conn: PrinterConn) -> None:
         while True:

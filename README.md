@@ -28,6 +28,8 @@ stesse funzioni, ma senza CUPS e senza container in più.
 - Azione **`stampa_remota.stampa`** per le automazioni: stampa un file, un indirizzo web o un testo, su una stampante a scelta.
 - Evento **`stampa_remota_evento`** a ogni cambio di stato (`stato`, `avviso`, `errore`, `nome`, `stampante`, `utente`).
 - Se la stampante è spenta o occupata il lavoro resta in coda e riparte da solo (fino a 6 ore).
+- **Niente copie doppie**: se l'invio si interrompe, l'integrazione chiede alla stampante se ha già il documento prima di rimandarlo;
+  se non può saperlo segna "esito incerto" e lascia decidere a te.
 
 ## Come funziona (senza CUPS)
 

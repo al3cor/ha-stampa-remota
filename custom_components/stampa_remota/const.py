@@ -1,6 +1,6 @@
 """Constants of Stampa remota."""
 DOMAIN = "stampa_remota"
-VERSION = "1.2.1"
+VERSION = "1.2.2"
 
 CONF_URI = "printer_uri"
 CONF_NAME = "nome"

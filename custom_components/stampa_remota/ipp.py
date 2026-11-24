@@ -1,6 +1,6 @@
 """Minimal IPP/1.1 client (RFC 8010/8011) on aiohttp: only what a driverless print needs.
 
-Operations: Get-Printer-Attributes, Print-Job, Validate-Job, Get-Job-Attributes, Cancel-Job.
+Operations: Get-Printer-Attributes, Print-Job, Validate-Job, Get-Job-Attributes, Get-Jobs, Cancel-Job.
 No CUPS: the document is sent straight to the printer in a format it declares (PDF, URF or JPEG).
 """
 from __future__ import annotations
@@ -18,6 +18,7 @@ OP_PRINT_JOB = 0x0002
 OP_VALIDATE_JOB = 0x0004
 OP_CANCEL_JOB = 0x0008
 OP_GET_JOB_ATTRIBUTES = 0x0009
+OP_GET_JOBS = 0x000A
 OP_GET_PRINTER_ATTRIBUTES = 0x000B
 
 # delimiter tags
@@ -67,11 +68,15 @@ STATUS_HINTS = {
 
 
 class IppError(Exception):
-    """The printer answered with an error status or could not be reached."""
+    """The printer answered with an error status or could not be reached.
 
-    def __init__(self, message: str, status: int | None = None) -> None:
+    sent = the connection was made, so the printer may have received the request even if no answer came back.
+    """
+
+    def __init__(self, message: str, status: int | None = None, sent: bool = True) -> None:
         super().__init__(message)
         self.status = status
+        self.sent = sent
 
 
 @dataclass
@@ -224,7 +229,7 @@ class IppClient:
         try:
             async with self._session.post(
                 self._url, data=body, headers={"Content-Type": "application/ipp"},
-                timeout=aiohttp.ClientTimeout(total=timeout), ssl=False,
+                timeout=aiohttp.ClientTimeout(total=timeout, connect=15), ssl=False,
             ) as r:
                 if r.status == 401:
                     raise IppError("la stampante chiede utente e password per l'IPP: disattiva l'autenticazione IPP "
@@ -238,7 +243,9 @@ class IppClient:
         except IppError:
             raise
         except (aiohttp.ClientError, TimeoutError, OSError) as err:
-            raise IppError(explain_connection_error(err, self.uri)) from err
+            # no connection at all: nothing was sent. Any other failure: the printer may have the document
+            not_sent = isinstance(err, (aiohttp.ClientConnectorError, aiohttp.ConnectionTimeoutError))
+            raise IppError(explain_connection_error(err, self.uri), sent=not not_sent) from err
         if resp.status >= 0x0400:
             msg = resp.group(TAG_OPERATION).get("status-message", [""])[0]
             hint = STATUS_HINTS.get(resp.status, msg or "la stampante ha rifiutato la richiesta")
@@ -268,6 +275,14 @@ class IppClient:
             (T_KEYWORD, "requested-attributes", ["job-state", "job-state-reasons"])], timeout=15)
         g = r.group(TAG_JOB)
         return JOB_STATES.get(g.get("job-state", [0])[0], "unknown"), g.get("job-state-reasons", [])
+
+    async def jobs(self, which: str) -> list[tuple[int, str]]:
+        """(job-id, job-name) of the jobs the printer knows; which = completed / not-completed."""
+        r = await self._call(OP_GET_JOBS, [
+            (T_NAME, "requesting-user-name", self.user), (T_KEYWORD, "which-jobs", which),
+            (T_KEYWORD, "requested-attributes", ["job-id", "job-name"])], timeout=15)
+        return [(int(g["job-id"][0]), str(g.get("job-name", [""])[0])) for t, g in r.groups
+                if t == TAG_JOB and g.get("job-id")]
 
     async def cancel(self, job_id: int) -> None:
         await self._call(OP_CANCEL_JOB, [(T_INTEGER, "job-id", job_id),
